@@ -71,15 +71,60 @@ class UserController extends Controller
     {
         $sheet = $request->input('sheet');
         if (!$sheet) {
-            return response()->json(['error' => 'Sheet name is required.'], 400);
+            return response()->json(['error' => true, 'message' => 'Sheet name is required.'], 400);
         }
 
         $client = new Client();
         try {
-            $response = $client->get($this->scriptUrl . '?sheet=' . urlencode($sheet));
-            return response()->json(json_decode($response->getBody(), true));
+            // Build query parameters
+            $params = [
+                'sheet' => $sheet,
+                'page' => $request->input('page', 1),
+                'per_page' => $request->input('per_page', 100)
+            ];
+
+            // Build URL with query parameters
+            $url = $this->scriptUrl . '?' . http_build_query($params);
+            \Log::info('Requesting sheet data:', ['url' => $url]);
+
+            $response = $client->get($url);
+            $rawResponse = $response->getBody()->getContents();
+            \Log::info('Sheet data raw response:', [
+                'sheet' => $sheet,
+                'response' => $rawResponse
+            ]);
+            
+            $data = json_decode($rawResponse, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception('Invalid JSON response: ' . json_last_error_msg());
+            }
+            
+            // Check for Apps Script error response
+            if (isset($data['error']) && $data['error'] === true) {
+                throw new \Exception($data['message'] ?? 'Unknown error from Apps Script');
+            }
+
+            // If the response is just an array, wrap it in data property
+            if (is_array($data) && !isset($data['data'])) {
+                $data = ['data' => $data];
+            }
+            
+            \Log::info('Sheet data processed:', [
+                'sheet' => $sheet,
+                'rowCount' => count($data['data'] ?? [])
+            ]);
+            
+            return response()->json($data);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch sheet data.'], 500);
+            \Log::error('Failed to fetch sheet data:', [
+                'sheet' => $sheet,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => true,
+                'message' => 'Failed to fetch sheet data: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

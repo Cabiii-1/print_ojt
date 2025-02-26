@@ -132,46 +132,60 @@
                 if (sheet) {
                     $.getJSON("{{ route('getSheetData') }}", { sheet: sheet }, function(response) {
                         if (response.data && response.data.length > 0) {
-                            // Update headers
+                            // Update table content
                             const headers = Object.keys(response.data[0]);
-                            let headerHtml = `
+                            
+                            // Update column menu
+                            const columnMenu = document.querySelector('[aria-labelledby="column-menu"]');
+                            columnMenu.innerHTML = headers.map(header => `
+                                <label class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                    <input type="checkbox" id="checkbox-${header}" class="form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" checked
+                                           onchange="toggleColumn('${header}')">
+                                    <span class="ml-3">${header}</span>
+                                </label>
+                            `).join('');
+
+                            // Update table headers
+                            const thead = document.querySelector('thead');
+                            thead.innerHTML = `
                                 <tr class="bg-gradient-to-r from-gray-50 to-gray-100">
                                     <th scope="col" class="sticky top-0 px-6 py-4 border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
                                         <label class="inline-flex items-center">
                                             <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                                         </label>
-                                    </th>`;
-                            
-                            headers.forEach(header => {
-                                headerHtml += `
-                                    <th scope="col" id="header-${header}" class="sticky top-0 px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
-                                        ${header}
-                                    </th>`;
-                            });
-                            headerHtml += '</tr>';
-                            $('#tableHeaders').html(headerHtml);
+                                    </th>
+                                    ${headers.map(header => `
+                                        <th scope="col" id="header-${header}" class="sticky top-0 px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
+                                            ${header}
+                                        </th>
+                                    `).join('')}
+                                </tr>
+                            `;
 
                             // Update table body
-                            let bodyHtml = '';
-                            response.data.forEach((row, index) => {
-                                bodyHtml += `
-                                    <tr class="even:bg-gray-50 hover:bg-blue-50 transition-colors duration-150">
-                                        <td class="px-6 py-4 whitespace-nowrap border-r border-gray-100">
-                                            <label class="inline-flex items-center">
-                                                <input type="checkbox" class="row-selector form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" data-index="${index}">
-                                            </label>
-                                        </td>`;
-                                
-                                headers.forEach(header => {
-                                    const value = row[header] || '';
-                                    bodyHtml += `
-                                        <td class="column-${header} px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-100 ${typeof value === 'number' ? 'text-right' : ''}">
-                                            ${value}
-                                        </td>`;
-                                });
-                                bodyHtml += '</tr>';
+                            const tbody = document.querySelector('tbody');
+                            tbody.innerHTML = response.data.map((row, index) => `
+                                <tr class="even:bg-gray-50 hover:bg-blue-50 transition-colors duration-150">
+                                    <td class="px-6 py-4 whitespace-nowrap border-r border-gray-100">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" class="row-selector form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" data-index="${index}">
+                                        </label>
+                                    </td>
+                                    ${headers.map(header => {
+                                        const value = row[header] || '';
+                                        return `
+                                            <td class="column-${header} px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-100 ${typeof value === 'number' ? 'text-right' : ''}">
+                                                ${value}
+                                            </td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('');
+
+                            // Reattach select-all event listener
+                            document.getElementById('select-all').addEventListener('change', function() {
+                                const checkboxes = document.querySelectorAll('.row-selector');
+                                checkboxes.forEach(checkbox => checkbox.checked = this.checked);
                             });
-                            $('#tableBody').html(bodyHtml);
                         } else {
                             $('#tableBody').html('<tr><td colspan="100%" class="px-6 py-4 text-center text-gray-500">No data found</td></tr>');
                         }
