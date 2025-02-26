@@ -22,7 +22,14 @@ class PrintController extends Controller
             'headers' => $headers,
             'data' => $selectedData
         ]);
+
+        $pdf->getDomPDF()->set_option('isPhpEnabled', true);
+        $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);
+        $pdf->getDomPDF()->set_option('isJavascriptEnabled', true);
         
-        return $pdf->stream('Print_Preview.pdf');
+        return $pdf->stream('Print_Preview.pdf', [
+            'Attachment' => false,
+            'print' => true,
+        ]);
     }
 }

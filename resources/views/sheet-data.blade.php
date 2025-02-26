@@ -45,6 +45,8 @@
                            placeholder="Search in table..."
                            class="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                 </div>
+               
+                  
 
                 <button onclick="handlePrint()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                     <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,9 +61,9 @@
                     <thead>
                         <tr class="bg-gradient-to-r from-gray-50 to-gray-100">
                             <th scope="col" class="sticky top-0 px-6 py-4 border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                </label>
+                            <div class="input-group mb-3">
+                         <button class="btn btn-secondary" id="select-all-button" onclick="toggleSelectAll()">Select all</button>
+                    </div>
                             </th>
                             @foreach ($headers as $header)
                                 <th scope="col" id="header-{{ $header }}" class="sticky top-0 px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
@@ -268,5 +270,24 @@
             .catch(error => console.error("Error printing:", error));
         }
     </script>
+    <script>
+    function toggleSelectAll() {
+        const searchInput = document.getElementById('searchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('tbody tr');
+        const checkboxes = document.querySelectorAll('.row-selector');
+        const selectAllButton = document.getElementById('select-all-button');
+        const isSelectAll = selectAllButton.innerText === 'Select all';
+
+        rows.forEach((row, index) => {
+            const cells = Array.from(row.querySelectorAll('td')).slice(1); // Skip the first cell with the checkbox
+            const rowText = cells.map(cell => cell.innerText.toLowerCase()).join(' ');
+            const isMatch = rowText.includes(searchInput);
+            checkboxes[index].checked = isSelectAll && isMatch;
+        });
+
+        selectAllButton.innerText = isSelectAll ? 'Unselect all' : 'Select all';
+    }
+</script>
 </body>
 </html>
+
