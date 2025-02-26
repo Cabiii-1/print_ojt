@@ -15,6 +15,10 @@
         @else
             <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex-1 flex items-center gap-4">
+                    <select id="sheetDropdown" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 relative z-50">
+                        <option value="">Select a Sheet</option>
+                    </select>
+                    
                     <div class="relative inline-block text-left" x-data="{ open: false }">
                         <button @click="open = !open" type="button" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="column-menu" aria-expanded="true" aria-haspopup="true">
                             <span>Columns</span>
@@ -23,7 +27,7 @@
                             </svg>
                         </button>
 
-                        <div x-show="open" @click.away="open = false" class="origin-top-right absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100">
+                        <div x-show="open" @click.away="open = false" class="origin-top-right absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 z-50">
                             <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="column-menu">
                                 @foreach ($headers as $header)
                                     <label class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
@@ -109,7 +113,73 @@
     </style>
 
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        // Sheet handling functionality
+        $(document).ready(function() {
+            // Fetch sheet names
+            $.getJSON("{{ route('getSheets') }}", function(response) {
+                if (response.sheets) {
+                    $.each(response.sheets, function(index, sheetName) {
+                        $('#sheetDropdown').append(`<option value="${sheetName}">${sheetName}</option>`);
+                    });
+                }
+            });
+
+            // Fetch data when selecting a sheet
+            $('#sheetDropdown').change(function() {
+                var sheet = $(this).val();
+                if (sheet) {
+                    $.getJSON("{{ route('getSheetData') }}", { sheet: sheet }, function(response) {
+                        if (response.data && response.data.length > 0) {
+                            // Update headers
+                            const headers = Object.keys(response.data[0]);
+                            let headerHtml = `
+                                <tr class="bg-gradient-to-r from-gray-50 to-gray-100">
+                                    <th scope="col" class="sticky top-0 px-6 py-4 border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                        </label>
+                                    </th>`;
+                            
+                            headers.forEach(header => {
+                                headerHtml += `
+                                    <th scope="col" id="header-${header}" class="sticky top-0 px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-b border-gray-200 bg-opacity-75 backdrop-blur backdrop-filter">
+                                        ${header}
+                                    </th>`;
+                            });
+                            headerHtml += '</tr>';
+                            $('#tableHeaders').html(headerHtml);
+
+                            // Update table body
+                            let bodyHtml = '';
+                            response.data.forEach((row, index) => {
+                                bodyHtml += `
+                                    <tr class="even:bg-gray-50 hover:bg-blue-50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap border-r border-gray-100">
+                                            <label class="inline-flex items-center">
+                                                <input type="checkbox" class="row-selector form-checkbox h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" data-index="${index}">
+                                            </label>
+                                        </td>`;
+                                
+                                headers.forEach(header => {
+                                    const value = row[header] || '';
+                                    bodyHtml += `
+                                        <td class="column-${header} px-6 py-4 whitespace-nowrap text-sm text-gray-600 border-r border-gray-100 ${typeof value === 'number' ? 'text-right' : ''}">
+                                            ${value}
+                                        </td>`;
+                                });
+                                bodyHtml += '</tr>';
+                            });
+                            $('#tableBody').html(bodyHtml);
+                        } else {
+                            $('#tableBody').html('<tr><td colspan="100%" class="px-6 py-4 text-center text-gray-500">No data found</td></tr>');
+                        }
+                    });
+                }
+            });
+        });
+
         // Search functionality
         document.getElementById('searchInput').addEventListener('input', function(e) {
             const searchText = e.target.value.toLowerCase();
