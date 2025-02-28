@@ -9,14 +9,18 @@ class UserController extends Controller
 {
     private $scriptUrl = 'https://script.google.com/macros/s/AKfycbwkl1mdCpm-moQVadvcbsqFQupCDC7uWSGATz-0B9drXh9Q3dpWGOy90Mz2xllqc1Uw/exec';
 
-    public function index()
+    public function index($sheet = null)
     {
         // Initialize Guzzle HTTP Client
         $client = new Client();
 
         try {
-            // Make a GET request to the API
-            $response = $client->get($this->scriptUrl);
+            // Make a GET request to the API with optional sheet parameter
+            $url = $this->scriptUrl;
+            if ($sheet) {
+                $url .= '?sheet=' . urlencode($sheet);
+            }
+            $response = $client->get($url);
             $apiResponse = json_decode($response->getBody(), true);
 
             // Extract headers (column names) from the first row of data
